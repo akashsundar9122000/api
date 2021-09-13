@@ -1,10 +1,11 @@
 const express = require('express');
 
 const app=express();
-
+const userRoutes = require('./user');
 const mongoose = require('mongoose');
 const Notes = require('./models/notes');
 const bodyParser = require('body-parser');
+const checkAuth=require('./middleware/check-auth');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}));
@@ -24,12 +25,12 @@ app.use((req,res,next)=>{
     next();
   })
 
-app.post('/notes',(req,res)=>{
+app.post('/notes',checkAuth,(req,res)=>{
     const newNotes = new Notes({
         title:req.body.title,
-        content:req.body.content
+        content:req.body.content,
+        creator:req.userData.userId
     })
-
     newNotes.save().then((notes)=>{
         res.send(notes);
     }).catch(err=>{
@@ -45,12 +46,28 @@ app.get('/notes',(req,res)=>{
     })
 })
 
+app.put('/notes/:id',checkAuth,(req,res)=>{
+    const newNotes = new Notes({
+        _id:req.body._id,
+        title:req.body.title,
+        content:req.body.content,
+        creator:req.userData.userId
+    })
+    Notes.updateOne({_id:req.params.id},newNotes).then(result=>{
+        res.send(result);
+    })
+})
+
 app.delete('/notes/:id',(req,res)=>{
     Notes.deleteOne({_id:req.params.id}).then((result)=>{
         res.send(result);
     })
 })
 
-app.listen(3000,()=>{
+app.use('/user',userRoutes);
+
+const port = process.env.PORT || 3000
+
+app.listen(port,()=>{
     console.log('Listening on 3000')
 })
